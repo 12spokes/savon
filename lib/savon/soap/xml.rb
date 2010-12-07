@@ -55,22 +55,22 @@ module Savon
       end
 
       # Sets the SOAP envelope namespace.
-      attr_writer :env_namespace
+       attr_writer :env_namespace
 
-      # Returns the SOAP envelope namespace. Defaults to :env.
-      def env_namespace
-        @env_namespace ||= :env
-      end
+       # Returns the SOAP envelope namespace. Defaults to :env.
+       def env_namespace
+         @env_namespace ||= :env
+       end
 
       # Sets the +namespaces+ Hash.
       attr_writer :namespaces
 
-      # Returns the +namespaces+. Defaults to a Hash containing the SOAP envelope namespace.
+      # Returns the +namespaces+. Defaults to a Hash containing the <tt>xmlns:env</tt> namespace.
       def namespaces
         @namespaces ||= begin
-          key = env_namespace.blank? ? "xmlns" : "xmlns:#{env_namespace}"
-          { key => SOAP::Namespace[version] }
-        end
+           key = env_namespace.blank? ? "xmlns" : "xmlns:#{env_namespace}"
+           { key => SOAP::Namespace[version] }
+         end
       end
 
       # Sets the default namespace identifier.
@@ -101,9 +101,9 @@ module Savon
 
       # Returns the XML for a SOAP request.
       def to_xml
-        @xml ||= tag(builder, :Envelope, complete_namespaces) do |xml|
-          tag(xml, :Header) { xml << header_for_xml } unless header_for_xml.empty?
-          tag(xml, :Body) { xml.tag!(*input) { xml << body_to_xml } }
+        @xml ||= builder.env :Envelope, complete_namespaces do |xml|
+          xml.env(:Header) { xml << header_for_xml } unless header_for_xml.empty?
+          xml.env(:Body) { xml.tag!(*input) { xml << body_to_xml } }
         end
       end
 
@@ -114,13 +114,6 @@ module Savon
         builder = Builder::XmlMarkup.new
         builder.instruct!
         builder
-      end
-
-      # Expects a builder +xml+ instance, a tag +name+ and accepts optional +namespaces+
-      # and a block to create an XML tag.
-      def tag(xml, name, namespaces = {}, &block)
-        return xml.tag! name, namespaces, &block if env_namespace.blank?
-        xml.tag! env_namespace, name, namespaces, &block
       end
 
       # Returns the complete Hash of namespaces.

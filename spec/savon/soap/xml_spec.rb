@@ -5,26 +5,20 @@ describe Savon::SOAP::XML do
 
   describe ".to_hash" do
     it "should return a given SOAP response body as a Hash" do
-      hash = Savon::SOAP::XML.to_hash Fixture.response(:authentication)
-      hash[:authenticate_response][:return].should == {
-        :success => true,
-        :authentication_value => {
-          :token_hash => "AAAJxA;cIedoT;mY10ExZwG6JuKgp2OYKxow==",
-          :token => "a68d1d6379b62ff339a0e0c69ed4d9cf",
-          :client => "radclient"
-        }
-      }
+      hash = Savon::SOAP::XML.to_hash ResponseFixture.authentication
+      hash[:authenticate_response][:return].should ==
+        ResponseFixture.authentication(:to_hash)
     end
 
     it "should return a Hash for a SOAP multiRef response" do
-      hash = Savon::SOAP::XML.to_hash Fixture.response(:multi_ref)
+      hash = Savon::SOAP::XML.to_hash ResponseFixture.multi_ref
       
       hash[:list_response].should be_a(Hash)
       hash[:multi_ref].should be_an(Array)
     end
 
     it "should add existing namespaced elements as an array" do
-      hash = Savon::SOAP::XML.to_hash Fixture.response(:list)
+      hash = Savon::SOAP::XML.to_hash ResponseFixture.list
       
       hash[:multi_namespaced_entry_response][:history].should be_a(Hash)
       hash[:multi_namespaced_entry_response][:history][:case].should be_an(Array)
@@ -88,17 +82,6 @@ describe Savon::SOAP::XML do
     end
   end
 
-  describe "#env_namespace" do
-    it "should default to :env" do
-      xml.env_namespace.should == :env
-    end
-
-    it "should set the SOAP envelope namespace" do
-      xml.env_namespace = :soapenv
-      xml.env_namespace.should == :soapenv
-    end
-  end
-
   describe "#namespaces" do
     it "should default to a Hash containing the namespace for SOAP 1.1" do
       xml.namespaces.should == { "xmlns:env" => "http://schemas.xmlsoap.org/soap/envelope/" }
@@ -152,10 +135,6 @@ describe Savon::SOAP::XML do
     context "by default" do
       it "should start with an XML declaration" do
         xml.to_xml.should match(/^<\?xml version="1.0" encoding="UTF-8"\?>/)
-      end
-
-      it "should use default SOAP envelope namespace" do
-        xml.to_xml.should include("<env:Envelope", "<env:Body")
       end
 
       it "should add the xsd namespace" do
@@ -216,13 +195,6 @@ describe Savon::SOAP::XML do
         uri = "http://schemas.xmlsoap.org/soap/envelope/"
         xml.to_xml.should match(/<env:Envelope (.*)xmlns:env="#{uri}"(.*)>/)
         reset_soap_version
-      end
-    end
-
-    context "with the SOAP envelope namespace set to an empty String" do
-      it "should not add a namespace to SOAP envelope tags" do
-        xml.env_namespace = ""
-        xml.to_xml.should include("<Envelope", "<Body")
       end
     end
 
