@@ -1,5 +1,7 @@
 require "builder"
 require "crack/xml"
+require "gyoku"
+
 require "savon/soap"
 require "savon/core_ext/hash"
 
@@ -55,22 +57,22 @@ module Savon
       end
 
       # Sets the SOAP envelope namespace.
-       attr_writer :env_namespace
+      attr_writer :env_namespace
 
-       # Returns the SOAP envelope namespace. Defaults to :env.
-       def env_namespace
-         @env_namespace ||= :env
-       end
+      # Returns the SOAP envelope namespace. Defaults to :env.
+      def env_namespace
+        @env_namespace ||= :env
+      end
 
       # Sets the +namespaces+ Hash.
       attr_writer :namespaces
 
-      # Returns the +namespaces+. Defaults to a Hash containing the <tt>xmlns:env</tt> namespace.
+      # Returns the +namespaces+. Defaults to a Hash containing the SOAP envelope namespace.
       def namespaces
         @namespaces ||= begin
-           key = env_namespace.blank? ? "xmlns" : "xmlns:#{env_namespace}"
-           { key => SOAP::Namespace[version] }
-         end
+          key = env_namespace.blank? ? "xmlns" : "xmlns:#{env_namespace}"
+          { key => SOAP::Namespace[version] }
+        end
       end
 
       # Sets the default namespace identifier.
@@ -87,7 +89,7 @@ module Savon
       # Accessor for the <tt>Savon::WSSE</tt> object.
       attr_accessor :wsse
 
-      # Accessor for the SOAP +body+. Expected to be a Hash that can be translated to XML via Hash.to_soap_xml
+      # Accessor for the SOAP +body+. Expected to be a Hash that can be translated to XML via Gyoku.xml
       # or any other Object responding to to_s.
       attr_accessor :body
 
@@ -101,9 +103,9 @@ module Savon
 
       # Returns the XML for a SOAP request.
       def to_xml
-        @xml ||= builder.env :Envelope, complete_namespaces do |xml|
-          xml.env(:Header) { xml << header_for_xml } unless header_for_xml.empty?
-          xml.env(:Body) { xml.tag!(*input) { xml << body_to_xml } }
+        @xml ||= tag(builder, :Envelope, complete_namespaces) do |xml|
+          tag(xml, :Header) { xml << header_for_xml } unless header_for_xml.empty?
+          tag(xml, :Body) { xml.tag!(*input) { xml << body_to_xml } }
         end
       end
 
@@ -116,6 +118,13 @@ module Savon
         builder
       end
 
+      # Expects a builder +xml+ instance, a tag +name+ and accepts optional +namespaces+
+      # and a block to create an XML tag.
+      def tag(xml, name, namespaces = {}, &block)
+        return xml.tag! name, namespaces, &block if env_namespace.blank?
+        xml.tag! env_namespace, name, namespaces, &block
+      end
+
       # Returns the complete Hash of namespaces.
       def complete_namespaces
         defaults = SchemaTypes.dup
@@ -125,7 +134,7 @@ module Savon
 
       # Returns the SOAP header as an XML String.
       def header_for_xml
-        @header_for_xml ||= header.to_soap_xml + wsse_header
+        @header_for_xml ||= Gyoku.xml(header) + wsse_header
       end
 
       # Returns the WSSE header or an empty String in case WSSE was not set.
@@ -135,7 +144,7 @@ module Savon
 
       # Returns the SOAP body as an XML String.
       def body_to_xml
-        body.respond_to?(:to_soap_xml) ? body.to_soap_xml : body.to_s
+        body.kind_of?(Hash) ? Gyoku.xml(body) : body.to_s
       end
 
     end
